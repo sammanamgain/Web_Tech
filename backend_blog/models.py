@@ -1,7 +1,7 @@
-#this file is all about the structure of tables of database
+# this file is all about the structure of tables of database
 
 from sqlalchemy import Column, Integer, String
-#we are importing base to create object and mapping to table
+# we are importing base to create object and mapping to table
 from database import Base
 
 
