@@ -1,4 +1,4 @@
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException, Response, status
 import models
 from models import Blog
 import pydenticschema
@@ -7,7 +7,6 @@ from pydenticschema import Blog
 
 from database import Base, engine, SessionLocal
 from sqlalchemy.orm import Session
-
 
 
 # running the server or app , main app will start from this code , this is the main file
@@ -32,8 +31,8 @@ async def root():
 # query parameters
 
 
-@app.get("/blogs")
-async def root(limit=10):
+@app.get("/blogs", status_code=status.HTTP_200_OK)
+async def root(limit=10,):
     return {"blogpost": f' {limit} blogs from the database'}
 
 # in the path you can use variables too like i have used id here , i can 1 2 3 or any things inplace of id , but only integer as i mentioned its type strictly
@@ -54,7 +53,9 @@ async def root(id: int):
 Base.metadata.create_all(bind=engine)
 
 models.Base.metadata.create_all(bind=engine)
-#this is used to create the instance of database session which is db object , yield is generator here
+# this is used to create the instance of database session which is db object , yield is generator here
+
+
 def get_db():
     db = SessionLocal()
     try:
@@ -63,10 +64,59 @@ def get_db():
         db.close()
 
 
+
+
+# retriving the blog from database
+
+@app.get("/blog/get")
+def getdata(db: Session = Depends(get_db)):
+    new_blog = db.query(models.Blog).all()
+
+    return new_blog
+
+
 @app.post("/blog/add")
-def adddata(request: pydenticschema.Blog, db: Session = Depends(get_db)): #depends keyword is used to inject dependency ,which will return value from get_db to adddata
-    new_blog = models.Blog(title=request.title, body=request.body) #models.Blog is the class that we made in models.py in which we are passing the arguments
-    db.add(new_blog) #adding the data to the database , or object is mapped to db
+# depends keyword is used to inject dependency ,which will return value from get_db to adddata
+def adddata(request: pydenticschema.Blog, db: Session = Depends(get_db)):
+    # models.Blog is the class that we made in models.py in which we are passing the arguments
+    new_blog = models.Blog(title=request.title, body=request.body)
+    db.add(new_blog)  # adding the data to the database , or object is mapped to db
     db.commit()
     db.refresh(new_blog)
     return new_blog
+
+
+@app.get("/blog/get/{id}", status_code=200)
+def getdata(id: int, db: Session = Depends(get_db)):
+    new_blog = db.query(models.Blog).filter(models.Blog.id == id).all()
+    if not new_blog:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="not found in server")
+        # Response.status_code = status.HTTP_404_NOT_FOUND
+        # return {"details":" blog with this id not found"}
+    return new_blog
+
+
+@app.delete("/blog/delete/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete(id: int, db: Session = Depends(get_db)):
+    b = db.query(models.Blog).filter(models.Blog.id ==
+                                     id)
+    if not b.first():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="not found in server")
+    b.delete(synchronize_session=False)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@app.put("/blog/update/{id}", status_code=status.HTTP_202_ACCEPTED)
+def update(id: int, request: pydenticschema.Blog, db: Session = Depends(get_db)):
+
+    b = db.query(models.Blog).filter(models.Blog.id == id)
+    if not b.first():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="not found in server")
+    b.update(
+        {"title": request.title, "body": request.body})
+    db.commit()
+    return {"sucessfully update"}
