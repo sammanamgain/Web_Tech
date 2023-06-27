@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import Depends, FastAPI, HTTPException, Response, status
 import models
 from models import Blog
@@ -67,8 +68,9 @@ def get_db():
 
 
 # retriving the blog from database
-
-@app.get("/blog/get")
+# we are defining reponse body as list as it return the multiple blog not a single
+#and we need to define the schema for each blog, so we are using list here
+@app.get("/blog/get",response_model=List[pydenticschema.showBlog])
 def getdata(db: Session = Depends(get_db)):
     new_blog = db.query(models.Blog).all()
 
@@ -86,7 +88,7 @@ def adddata(request: pydenticschema.Blog, db: Session = Depends(get_db)):
     return new_blog
 
 
-@app.get("/blog/get/{id}", status_code=200)
+@app.get("/blog/get/{id}", status_code=200,response_model=pydenticschema.showBlog)
 def getdata(id: int, db: Session = Depends(get_db)):
     new_blog = db.query(models.Blog).filter(models.Blog.id == id).all()
     if not new_blog:
