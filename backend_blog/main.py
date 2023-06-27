@@ -90,7 +90,7 @@ def adddata(request: pydenticschema.Blog, db: Session = Depends(get_db)):
 
 @app.get("/blog/get/{id}", status_code=200,response_model=pydenticschema.showBlog)
 def getdata(id: int, db: Session = Depends(get_db)):
-    new_blog = db.query(models.Blog).filter(models.Blog.id == id).all()
+    new_blog = db.query(models.Blog).filter(models.Blog.id == id).first() # if we use all , we need to define list of reponse_model
     if not new_blog:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="not found in server")
