@@ -1,6 +1,7 @@
 from typing import List
 from fastapi import Depends, FastAPI, HTTPException, Response, status
 import models
+import hashing
 from models import Blog
 import pydenticschema
 
@@ -8,6 +9,7 @@ from pydenticschema import Blog
 
 from database import Base, engine, SessionLocal
 from sqlalchemy.orm import Session
+from passlib.context import CryptContext
 
 
 # running the server or app , main app will start from this code , this is the main file
@@ -32,14 +34,14 @@ async def root():
 # query parameters
 
 
-@app.get("/blogs", status_code=status.HTTP_200_OK)
+@app.get("/blogs", status_code=status.HTTP_200_OK, tags=["blogs"])
 async def root(limit=10,):
     return {"blogpost": f' {limit} blogs from the database'}
 
 # in the path you can use variables too like i have used id here , i can 1 2 3 or any things inplace of id , but only integer as i mentioned its type strictly
 
 
-@app.get("/blogs/{id}")
+@app.get("/blogs/{id}", tags=["blogs"])
 async def root(id: int):
     return {"blogpost": id}
 
@@ -65,19 +67,17 @@ def get_db():
         db.close()
 
 
-
-
 # retriving the blog from database
 # we are defining reponse body as list as it return the multiple blog not a single
-#and we need to define the schema for each blog, so we are using list here
-@app.get("/blog/get",response_model=List[pydenticschema.showBlog])
+# and we need to define the schema for each blog, so we are using list here
+@app.get("/blog/get", response_model=List[pydenticschema.showBlog], tags=["blogs"])
 def getdata(db: Session = Depends(get_db)):
     new_blog = db.query(models.Blog).all()
 
     return new_blog
 
 
-@app.post("/blog/add")
+@app.post("/blog/add", tags=["blogs"])
 # depends keyword is used to inject dependency ,which will return value from get_db to adddata
 def adddata(request: pydenticschema.Blog, db: Session = Depends(get_db)):
     # models.Blog is the class that we made in models.py in which we are passing the arguments
@@ -88,9 +88,10 @@ def adddata(request: pydenticschema.Blog, db: Session = Depends(get_db)):
     return new_blog
 
 
-@app.get("/blog/get/{id}", status_code=200,response_model=pydenticschema.showBlog)
+@app.get("/blog/get/{id}", status_code=200, response_model=pydenticschema.showBlog, tags=["blogs"])
 def getdata(id: int, db: Session = Depends(get_db)):
-    new_blog = db.query(models.Blog).filter(models.Blog.id == id).first() # if we use all , we need to define list of reponse_model
+    # if we use all , we need to define list of reponse_model
+    new_blog = db.query(models.Blog).filter(models.Blog.id == id).first()
     if not new_blog:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="not found in server")
@@ -99,7 +100,7 @@ def getdata(id: int, db: Session = Depends(get_db)):
     return new_blog
 
 
-@app.delete("/blog/delete/{id}", status_code=status.HTTP_204_NO_CONTENT)
+@app.delete("/blog/delete/{id}", status_code=status.HTTP_204_NO_CONTENT, tags=["blogs"])
 def delete(id: int, db: Session = Depends(get_db)):
     b = db.query(models.Blog).filter(models.Blog.id ==
                                      id)
@@ -111,7 +112,7 @@ def delete(id: int, db: Session = Depends(get_db)):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@app.put("/blog/update/{id}", status_code=status.HTTP_202_ACCEPTED)
+@app.put("/blog/update/{id}", status_code=status.HTTP_202_ACCEPTED, tags=["blogs"])
 def update(id: int, request: pydenticschema.Blog, db: Session = Depends(get_db)):
 
     b = db.query(models.Blog).filter(models.Blog.id == id)
@@ -122,3 +123,29 @@ def update(id: int, request: pydenticschema.Blog, db: Session = Depends(get_db))
         {"title": request.title, "body": request.body})
     db.commit()
     return {"sucessfully update"}
+
+# create user
+# to create the hased password
+
+
+@app.post("/add/user", tags=["users"])
+def create_user(request: pydenticschema.User, db: Session = Depends(get_db)):
+
+    new_blog = models.User(
+        name=request.name, email=request.email, password=hashing.Hash.passwordhash(request.password))
+    db.add(new_blog)
+    db.commit()
+    db.refresh(new_blog)
+    return new_blog
+
+
+@app.get("/user/get/{id}", status_code=200, response_model=pydenticschema.showuser, tags=["users"])
+def geuser(id: int, db: Session = Depends(get_db)):
+    # if we use all , we need to define list of reponse_model
+    new_blog = db.query(models.User).filter(models.User.id == id).first()
+    if not new_blog:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="not found in server")
+        # Response.status_code = status.HTTP_404_NOT_FOUND
+        # return {"details":" blog with this id not found"}
+    return new_blog

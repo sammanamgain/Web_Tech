@@ -18,3 +18,17 @@ class showBlog(BaseModel):
     # body:str
     class Config():
         orm_mode = True
+
+
+
+class User(BaseModel):
+    name:str
+    email:str
+    password:str
+    
+    
+class showuser(BaseModel):
+    name:str
+    email:str
+    class Config():
+        orm_mode = True
