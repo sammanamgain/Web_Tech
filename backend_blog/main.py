@@ -81,7 +81,7 @@ def getdata(db: Session = Depends(get_db)):
 # depends keyword is used to inject dependency ,which will return value from get_db to adddata
 def adddata(request: pydenticschema.Blog, db: Session = Depends(get_db)):
     # models.Blog is the class that we made in models.py in which we are passing the arguments
-    new_blog = models.Blog(title=request.title, body=request.body)
+    new_blog = models.Blog(title=request.title, body=request.body,user_id=1)
     db.add(new_blog)  # adding the data to the database , or object is mapped to db
     db.commit()
     db.refresh(new_blog)
